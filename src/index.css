@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;

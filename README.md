@@ -21,7 +21,8 @@ A polished personal investment tracker built with React + TypeScript.
 - Built-in realistic sample data for first launch
 - CSV import with validation + clear errors
 - CSV/JSON export
-- Local-first persistence using `localStorage`, with code structured for future backend integration
+- One-click price refresh using free public market-price sources (keeps existing prices when unavailable)
+- Local-first persistence using IndexedDB (with migration from legacy `localStorage` data)
 
 ## Tech Stack
 
@@ -46,7 +47,6 @@ npm run build
 
 ## Future upgrade ideas
 
-- Connect market-price APIs behind a small data service layer
 - Add portfolio goals and allocation drift tracking
 - Add watchlist and investment journal modules
 - Add optional cloud sync/backend while keeping this local-first architecture
