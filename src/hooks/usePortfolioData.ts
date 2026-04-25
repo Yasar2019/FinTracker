@@ -120,6 +120,17 @@ export const usePortfolioData = () => {
     }));
   };
 
+  const deleteTransactions = (ids: string[]) => {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    setData((previous) => ({
+      ...previous,
+      transactions: previous.transactions.filter(
+        (transaction) => !idSet.has(transaction.id),
+      ),
+    }));
+  };
+
   const updateAssetPrice = (ticker: string, price: number) => {
     setData((previous) => ({
       ...previous,
@@ -174,6 +185,7 @@ export const usePortfolioData = () => {
     setSelectedAccount,
     upsertTransaction,
     deleteTransaction,
+    deleteTransactions,
     updateAssetPrice,
     updateAssetPrices,
     replaceData,

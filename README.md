@@ -20,6 +20,7 @@ A polished personal investment tracker built with React + TypeScript.
 - Asset category support (stocks, ETFs, crypto, cash, mutual funds, bonds, other)
 - Built-in realistic sample data for first launch
 - CSV import with validation + clear errors
+- Broker CSV import support for columns like `transaction_date`, `settlement_date`, `account_id`, `activity_type`, `symbol`, `quantity`, `unit_price`, `commission`, `net_cash_amount`
 - CSV/JSON export
 - One-click price refresh using free public market-price sources (keeps existing prices when unavailable)
 - Local-first persistence using IndexedDB (with migration from legacy `localStorage` data)

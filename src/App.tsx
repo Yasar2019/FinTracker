@@ -39,6 +39,7 @@ function App() {
     setSelectedAccount,
     upsertTransaction,
     deleteTransaction,
+    deleteTransactions,
     updateAssetPrice,
     updateAssetPrices,
     replaceData,
@@ -76,7 +77,7 @@ function App() {
       return <HoldingsPage holdings={holdings} accountLookup={accountLookup} onPriceUpdate={updateAssetPrice} />
     }
     if (activePage === 'transactions') {
-      return <TransactionsPage transactions={filteredTransactions} accounts={data.accounts} assets={data.assets} onSaveTransaction={upsertTransaction} onDeleteTransaction={deleteTransaction} onUpsertAsset={upsertAsset} />
+      return <TransactionsPage transactions={filteredTransactions} accounts={data.accounts} assets={data.assets} onSaveTransaction={upsertTransaction} onDeleteTransaction={deleteTransaction} onDeleteTransactions={deleteTransactions} onUpsertAsset={upsertAsset} />
     }
     return <AnalyticsPage holdings={holdings} portfolioHistory={analytics.portfolioHistory} performanceByAccount={analytics.performanceByAccount} contributionHistory={analytics.contributionHistory} dividendHistory={analytics.dividendHistory} />
   }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ASSET_TYPES, TRANSACTION_TYPES, type Account, type Asset, type AssetType, type Transaction } from '../types/portfolio'
 import { formatCurrency } from '../utils/format'
 
@@ -8,6 +8,7 @@ interface TransactionsPageProps {
   assets: Asset[]
   onSaveTransaction: (transaction: Transaction) => void
   onDeleteTransaction: (id: string) => void
+  onDeleteTransactions: (ids: string[]) => void
   onUpsertAsset: (asset: Asset) => void
 }
 
@@ -41,9 +42,15 @@ const emptyForm = (accountId?: string): FormValues => ({
   assetType: 'stocks',
 })
 
-export const TransactionsPage = ({ transactions, accounts, assets, onSaveTransaction, onDeleteTransaction, onUpsertAsset }: TransactionsPageProps) => {
+export const TransactionsPage = ({ transactions, accounts, assets, onSaveTransaction, onDeleteTransaction, onDeleteTransactions, onUpsertAsset }: TransactionsPageProps) => {
   const [form, setForm] = useState<FormValues>(() => emptyForm(accounts[0]?.id))
   const [error, setError] = useState('')
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | Transaction['type']>('all')
+  const [tickerFilter, setTickerFilter] = useState('all')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   const assetByTicker = useMemo(() => new Map(assets.map((asset) => [asset.ticker, asset])), [assets])
 
@@ -108,7 +115,67 @@ export const TransactionsPage = ({ transactions, accounts, assets, onSaveTransac
     resetForm()
   }
 
-  const sortedTransactions = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
+  const tickerOptions = useMemo(
+    () => [...new Set(transactions.map((transaction) => transaction.ticker).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [transactions],
+  )
+
+  const filteredTransactions = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+
+    return transactions.filter((transaction) => {
+      if (typeFilter !== 'all' && transaction.type !== typeFilter) return false
+      if (tickerFilter !== 'all' && transaction.ticker !== tickerFilter) return false
+      if (fromDate && transaction.date < fromDate) return false
+      if (toDate && transaction.date > toDate) return false
+      if (!normalizedSearch) return true
+
+      return [
+        transaction.date,
+        transaction.type,
+        transaction.ticker,
+        transaction.assetName,
+        transaction.accountId,
+        transaction.notes,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch)
+    })
+  }, [transactions, searchTerm, typeFilter, tickerFilter, fromDate, toDate])
+
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => b.date.localeCompare(a.date))
+  const allVisibleSelected = sortedTransactions.length > 0 && sortedTransactions.every((transaction) => selectedTransactionIds.includes(transaction.id))
+
+  useEffect(() => {
+    const validIds = new Set(transactions.map((transaction) => transaction.id))
+    setSelectedTransactionIds((previous) => previous.filter((id) => validIds.has(id)))
+  }, [transactions])
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedTransactionIds([])
+      return
+    }
+    setSelectedTransactionIds(sortedTransactions.map((transaction) => transaction.id))
+  }
+
+  const toggleSelectTransaction = (id: string) => {
+    setSelectedTransactionIds((previous) => (previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]))
+  }
+
+  const deleteSelectedTransactions = () => {
+    onDeleteTransactions(selectedTransactionIds)
+    setSelectedTransactionIds([])
+  }
+
+  const resetFilters = () => {
+    setSearchTerm('')
+    setTypeFilter('all')
+    setTickerFilter('all')
+    setFromDate('')
+    setToDate('')
+  }
 
   return (
     <div className='space-y-4'>
@@ -141,11 +208,67 @@ export const TransactionsPage = ({ transactions, accounts, assets, onSaveTransac
       </section>
 
       <section className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900'>
-        <h3 className='mb-3 text-base font-semibold'>Transaction history</h3>
+        <div className='mb-3 grid gap-2 md:grid-cols-5'>
+          <input
+            type='text'
+            placeholder='Search notes, ticker, type...'
+            className='rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800'
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+          <select
+            className='rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800'
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value as 'all' | Transaction['type'])}
+          >
+            <option value='all'>All types</option>
+            {TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+          </select>
+          <select
+            className='rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800'
+            value={tickerFilter}
+            onChange={(event) => setTickerFilter(event.target.value)}
+          >
+            <option value='all'>All tickers</option>
+            {tickerOptions.map((ticker) => <option key={ticker} value={ticker}>{ticker}</option>)}
+          </select>
+          <input
+            type='date'
+            className='rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800'
+            value={fromDate}
+            onChange={(event) => setFromDate(event.target.value)}
+          />
+          <div className='flex gap-2'>
+            <input
+              type='date'
+              className='w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800'
+              value={toDate}
+              onChange={(event) => setToDate(event.target.value)}
+            />
+            <button type='button' className='rounded-lg border border-slate-300 px-3 py-2 text-xs dark:border-slate-600' onClick={resetFilters}>
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+          <h3 className='text-base font-semibold'>Transaction history ({sortedTransactions.length})</h3>
+          <button
+            type='button'
+            className='rounded-lg bg-rose-100 px-3 py-2 text-xs font-medium text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-900/40 dark:text-rose-200'
+            disabled={selectedTransactionIds.length === 0}
+            onClick={deleteSelectedTransactions}
+          >
+            Delete selected ({selectedTransactionIds.length})
+          </button>
+        </div>
         <div className='overflow-x-auto'>
           <table className='min-w-full text-sm'>
             <thead>
               <tr className='border-b border-slate-200 text-left dark:border-slate-700'>
+                <th className='py-2 pr-2'>
+                  <input type='checkbox' aria-label='Select all transactions' checked={allVisibleSelected} onChange={toggleSelectAllVisible} />
+                </th>
                 <th className='py-2'>Date</th>
                 <th>Type</th>
                 <th>Ticker</th>
@@ -160,6 +283,14 @@ export const TransactionsPage = ({ transactions, accounts, assets, onSaveTransac
             <tbody>
               {sortedTransactions.map((transaction) => (
                 <tr key={transaction.id} className='border-b border-slate-100 dark:border-slate-800'>
+                  <td className='py-2 pr-2'>
+                    <input
+                      type='checkbox'
+                      aria-label={`Select transaction ${transaction.id}`}
+                      checked={selectedTransactionIds.includes(transaction.id)}
+                      onChange={() => toggleSelectTransaction(transaction.id)}
+                    />
+                  </td>
                   <td className='py-2'>{transaction.date}</td>
                   <td className='capitalize'>{transaction.type}</td>
                   <td>{transaction.ticker || '—'}</td>
